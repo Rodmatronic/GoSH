@@ -12,6 +12,13 @@
 #define VERSION "0.1"
 #define NAME "Goldie Shell (Go$H)"
 
+void print_environment_variables() {
+    extern char **environ;
+    for (char **env = environ; *env != NULL; env++) {
+        printf("%s\n", *env);
+    }
+}
+
 int main() {
     char input[MAX_COMMAND_LENGTH];
     char * pwd;
@@ -48,6 +55,27 @@ int main() {
             {
                 printf("exit\n");
                 return 1;
+            }
+
+            // Check if the command is 'export'
+            if (strcmp(input, "export") == 0) {
+                print_environment_variables();
+                continue;
+            }
+
+            // Check if the command is 'export'
+            if (strncmp(input, "export ", 7) == 0) {
+                char *variable = strtok(input + 7, "=");
+                char *value = strtok(NULL, "");
+
+                if (variable != NULL && value != NULL) {
+                    // Set the environment variable
+                    setenv(variable, value, 1);
+                } else {
+                    printf("Invalid export command\n");
+                }
+
+                continue;
             }
 
             // Tokenize the input to separate command and arguments
