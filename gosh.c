@@ -71,9 +71,7 @@ void execute_command(char * input)
             perror("getcwd");
             exit(EXIT_FAILURE);
         }
-
-        // Update ps1 to reflect the new current working directory
-        sprintf(ps1, "%s$ ", pwd);
+        return;
     }
 
     // Fork a child process
@@ -142,24 +140,31 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // Set PS1 environment variable
+    if (setenv("PS1", "\\u@\\h:\\w\\$ ", 1) != 0) {
+        perror("Error setting PS1");
+        return 1;
+    }
+
     pwd = getenv("PWD");
-    sprintf(ps1, "%s $ ", pwd);
 
     if (STARTMSG == 1)
     {
-        printf("       ___\n");
+        printf(" Goldie___\n");
         printf("    __/_  `.  .-````-.\n");
         printf("    \\_,` \\| \\-'  /   )`-')\n");
-        printf("    '') `'`    \\_ ((`''`\n");
-        printf("    ___/  ,    .'/ /|\n");
-        printf("    (_,___/...-` (_/_/ \n");
+        printf("      '') `'`    \\_ ((`''` SH\n");
+        printf("     ___/  ,    .'/ /|\n");
+        printf("    (_,___/...-` (_/_/   \n");
 
         printf("%s version %s, built with love <3\n", NAME, VERSION);
     }
 
     while (1) {
         while (1) {
-            printf("%s", ps1);
+            snprintf(ps1, sizeof(ps1), "%s", getenv("PS1"));
+            //printf("%s", ps1);
+            printf("$ ");
             fgets(input, MAX_COMMAND_LENGTH, stdin);
 
             // Remove trailing newline character
