@@ -1,4 +1,4 @@
 #/bin/sh
-gcc -o gosh gosh.c
+clang -o gosh gosh.c
 
 ./gosh

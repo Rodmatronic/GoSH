@@ -10,6 +10,7 @@
 #define DEBUG 0
 #define STARTMSG 1
 #define VERSION "0.1"
+#define NAME "Goldie Shell (Go$H)"
 
 int main() {
     char input[MAX_COMMAND_LENGTH];
@@ -27,7 +28,7 @@ int main() {
         printf("    ___/  ,    .'/ /|\n");
         printf("    (_,___/...-` (_/_/ \n");
 
-        printf("Goldie Shell (Go$H) version %s, built with love <3\n", VERSION);
+        printf("%s version %s, built with love <3\n", NAME, VERSION);
     }
 
     while (1) {
