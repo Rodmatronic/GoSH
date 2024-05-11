@@ -9,8 +9,12 @@
 #define COMNOTFOUND ": No such command"
 #define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.1"
+#define VERSION "0.15"
 #define NAME "Goldie Shell (Go$H)"
+
+char input[MAX_COMMAND_LENGTH];
+char * pwd;
+char ps1[1024];
 
 void print_environment_variables() {
     extern char **environ;
@@ -19,11 +23,126 @@ void print_environment_variables() {
     }
 }
 
-int main() {
-    char input[MAX_COMMAND_LENGTH];
-    char * pwd;
+void execute_command(char * input)
+{
+    // Tokenize the input to separate command and arguments
+    char *token;
+    char *args[MAX_ARGUMENTS + 1];
+    int arg_count = 0;
+
+    token = strtok(input, " ");
+    while (token != NULL && arg_count < MAX_ARGUMENTS) {
+        args[arg_count++] = token;
+        token = strtok(NULL, " ");
+    }
+    args[arg_count] = NULL; // Null-terminate the array of arguments
+
+    // Check if the command is 'cd'
+    if (strcmp(args[0], "cd") == 0) {
+        if (arg_count == 1) {
+            // Change to home directory
+            chdir(getenv("HOME"));
+        } else if (arg_count == 2) {
+            // Change to the specified directory
+            if (strcmp(args[1], "-") == 0) {
+                // Change to the previous directory
+                char *prev_dir = getenv("OLDPWD");
+                if (prev_dir != NULL) {
+                    chdir(prev_dir);
+                } else {
+                    printf("cd: OLDPWD not set\n");
+                }
+            } else {
+                // Change to the specified directory
+                if (chdir(args[1]) != 0) {
+                    printf("cd: %s: No such file or directory\n", args[1]);
+                }
+            }
+        } else {
+            printf("cd: too many arguments\n");
+        }
+
+        // Set the OLDPWD environment variable before changing the directory
+        setenv("OLDPWD", pwd, 1);
+
+        // Update pwd to reflect the new current working directory
+        pwd = getcwd(NULL, 0);
+        if (pwd == NULL) {
+            perror("getcwd");
+            exit(EXIT_FAILURE);
+        }
+
+        // Update ps1 to reflect the new current working directory
+        sprintf(ps1, "%s$ ", pwd);
+    }
+
+    // Fork a child process
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        // Error occurred
+        perror("fork");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        // Child process
+        execvp(args[0], args);
+
+        // If execvp returns, it means it failed
+        printf("%s%s\n", args[0], COMNOTFOUND);
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+        int status;
+        waitpid(pid, &status, 0);
+
+        // Check if the child process terminated normally
+        if (WIFEXITED(status)) {
+            int exit_status = WEXITSTATUS(status);
+            if (exit_status != 0) {
+                if (DEBUG == 1)
+                {
+                    printf("Child process exited with status %d\n", exit_status);
+                }
+            }
+        } else {
+            if (DEBUG == 1)
+            {
+                printf("Child process terminated abnormally\n");
+            }
+        }
+    }
+}
+
+
+int main(int argc, char *argv[]) {
+
+    // Check if the shell is invoked with a filename argument
+    if (argc == 2) {
+        FILE *file = fopen(argv[1], "r");
+        if (file == NULL) {
+            perror("fopen");
+            exit(EXIT_FAILURE);
+        }
+        
+        char line[MAX_COMMAND_LENGTH];
+        while (fgets(line, sizeof(line), file) != NULL) {
+            // Remove trailing newline character
+            line[strcspn(line, "\n")] = 0;
+
+            // Skip lines starting with '#'
+            if (line[0] == '#') {
+                continue;
+            }
+
+            // Execute the command
+            execute_command(line);
+        }
+
+        fclose(file);
+        return 0;
+    }
+
     pwd = getenv("PWD");
-    char ps1[1024];
     sprintf(ps1, "%s $ ", pwd);
 
     if (STARTMSG == 1)
@@ -78,94 +197,7 @@ int main() {
                 continue;
             }
 
-            // Tokenize the input to separate command and arguments
-            char *token;
-            char *args[MAX_ARGUMENTS + 1];
-            int arg_count = 0;
-
-            token = strtok(input, " ");
-            while (token != NULL && arg_count < MAX_ARGUMENTS) {
-                args[arg_count++] = token;
-                token = strtok(NULL, " ");
-            }
-            args[arg_count] = NULL; // Null-terminate the array of arguments
-
-            // Check if the command is 'cd'
-            if (strcmp(args[0], "cd") == 0) {
-                if (arg_count == 1) {
-                    // Change to home directory
-                    chdir(getenv("HOME"));
-                } else if (arg_count == 2) {
-                    // Change to the specified directory
-                    if (strcmp(args[1], "-") == 0) {
-                        // Change to the previous directory
-                        char *prev_dir = getenv("OLDPWD");
-                        if (prev_dir != NULL) {
-                            chdir(prev_dir);
-                        } else {
-                            printf("cd: OLDPWD not set\n");
-                        }
-                    } else {
-                        // Change to the specified directory
-                        if (chdir(args[1]) != 0) {
-                            printf("cd: %s: No such file or directory\n", args[1]);
-                        }
-                    }
-                } else {
-                    printf("cd: too many arguments\n");
-                }
-
-                // Set the OLDPWD environment variable before changing the directory
-                setenv("OLDPWD", pwd, 1);
-
-                // Update pwd to reflect the new current working directory
-                pwd = getcwd(NULL, 0);
-                if (pwd == NULL) {
-                    perror("getcwd");
-                    exit(EXIT_FAILURE);
-                }
-
-                // Update ps1 to reflect the new current working directory
-                sprintf(ps1, "%s$ ", pwd);
-
-                continue;
-            }
-
-            // Fork a child process
-            pid_t pid = fork();
-
-            if (pid == -1) {
-                // Error occurred
-                perror("fork");
-                exit(EXIT_FAILURE);
-            } else if (pid == 0) {
-                // Child process
-                execvp(args[0], args);
-
-                // If execvp returns, it means it failed
-                printf("%s%s\n", args[0], COMNOTFOUND);
-                exit(EXIT_FAILURE);
-            } else {
-                // Parent process
-                int status;
-                waitpid(pid, &status, 0);
-
-                // Check if the child process terminated normally
-                if (WIFEXITED(status)) {
-                    int exit_status = WEXITSTATUS(status);
-                    if (exit_status != 0) {
-                        if (DEBUG == 1)
-                        {
-                            printf("Child process exited with status %d\n", exit_status);
-                        }
-                    }
-                } else {
-                    if (DEBUG == 1)
-                    {
-                        printf("Child process terminated abnormally\n");
-                    }
-                }
-            }
+            execute_command(input);
         }
     }
 
