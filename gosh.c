@@ -9,7 +9,7 @@
 #define COMNOTFOUND ": No such command"
 #define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.15"
+#define VERSION "0.16"
 #define NAME "Goldie Shell (Go$H)"
 
 char input[MAX_COMMAND_LENGTH];
@@ -36,6 +36,31 @@ void execute_command(char * input)
         token = strtok(NULL, " ");
     }
     args[arg_count] = NULL; // Null-terminate the array of arguments
+
+    // Check if the command is 'export'
+    if (strcmp(input, "export ") == 0) {
+        char *variable = strtok(input + 7, "=");
+        char *value = strtok(NULL, "");
+
+        if (variable != NULL && value != NULL) {
+            // Set the environment variable
+            setenv(variable, value, 1);
+        } else {
+            printf("Invalid export command\n");
+        }
+    }
+
+    // Check if the command is 'export'
+    if (strcmp(input, "export") == 0) {
+        print_environment_variables();
+        return;
+    }
+
+    if (strcmp(input, "exit") == 0 || (strcmp(input, "leave") == 0))
+    {
+        printf("exit\n");
+        exit(EXIT_SUCCESS);
+    }
 
     // Check if the command is 'cd'
     if (strcmp(args[0], "cd") == 0) {
@@ -172,33 +197,6 @@ int main(int argc, char *argv[]) {
 
             // If the command is just whitespace or empty, do nothing and return
             if (strlen(input) == 0 || strspn(input, " \t\n\r\v\f") == strlen(input)) {
-                continue;
-            }
-
-            if (strcmp(input, "exit") == 0 || (strcmp(input, "leave") == 0))
-            {
-                printf("exit\n");
-                return 1;
-            }
-
-            // Check if the command is 'export'
-            if (strcmp(input, "export") == 0) {
-                print_environment_variables();
-                continue;
-            }
-
-            // Check if the command is 'export'
-            if (strncmp(input, "export ", 7) == 0) {
-                char *variable = strtok(input + 7, "=");
-                char *value = strtok(NULL, "");
-
-                if (variable != NULL && value != NULL) {
-                    // Set the environment variable
-                    setenv(variable, value, 1);
-                } else {
-                    printf("Invalid export command\n");
-                }
-
                 continue;
             }
 
