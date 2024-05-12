@@ -1,4 +1,12 @@
 # GoSH
-A simple shell written in C
-![image](https://github.com/Rodmatronic/GoSH/assets/105672808/479e9002-064c-4dcd-93bc-fcb7c31e955c)
-![image](https://github.com/Rodmatronic/GoSH/assets/105672808/7dfbc62d-0c35-4dcf-b5bf-8ff63b887cd0)
+A simple portable cross-platform Unix shell written in C.
+
+(here is the shell compiled on, and running on Darwin)
+![329817658-9991852b-0c68-4a43-86d0-3f7e81f1d47a](https://github.com/Rodmatronic/GoSH/assets/105672808/d83e13c9-2832-47c7-91b3-8b931293576a)
+
+# How can I use it?
+To build the binary, you must have the clang compiler installed.
+
+To compile it, run `sh compile.sh`, or `bash compile.sh` in the GoSH master directory. `gosh` should appear in the same directory.
+
+To install it on most 'Nix systems (aside from macOS/Darwin) run `sh install.sh`, it should compile (from `compile.sh`) and put itself into `/bin`.
