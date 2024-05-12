@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define MAX_COMMAND_LENGTH 167772
 #define MAX_ARGUMENTS 256
@@ -16,11 +17,19 @@ char input[MAX_COMMAND_LENGTH];
 char * pwd;
 char ps1[1024];
 
+void sigint_handler(int);
+void user_shell();
+
 void print_environment_variables() {
     extern char **environ;
     for (char **env = environ; *env != NULL; env++) {
         printf("%s\n", *env);
     }
+}
+
+void sigint_handler(int signum) {
+    printf("\n$ ");
+    fflush(stdout); // Flush output buffer to ensure prompt is displayed
 }
 
 void execute_command(char * input)
@@ -135,6 +144,30 @@ void execute_command(char * input)
     }
 }
 
+void user_shell() {
+    while (1) {
+        while (1) {
+            snprintf(ps1, sizeof(ps1), "%s", getenv("PS1"));
+            //printf("%s", ps1);
+            printf("$ ");
+            fgets(input, MAX_COMMAND_LENGTH, stdin);
+
+            // Remove trailing newline character
+            input[strcspn(input, "\n")] = 0;
+
+            // If the command is just whitespace or empty, do nothing and return
+            if (strlen(input) == 0 || strspn(input, " \t\n\r\v\f") == strlen(input)) {
+                if (DEBUG == 1)
+                {
+                    printf("No command. (or just whitespace)\n");
+                }
+                continue;
+            }
+
+            execute_command(input);
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     // Check if the shell is invoked with a filename argument
@@ -163,6 +196,8 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    signal(SIGINT, sigint_handler);
+    
     if (DEBUG == 1)
     {
         printf("DEBUG is on!\n");
@@ -212,28 +247,7 @@ int main(int argc, char *argv[]) {
         printf("%s", ps1);
     }
 
-    while (1) {
-        while (1) {
-            snprintf(ps1, sizeof(ps1), "%s", getenv("PS1"));
-            //printf("%s", ps1);
-            printf("$ ");
-            fgets(input, MAX_COMMAND_LENGTH, stdin);
-
-            // Remove trailing newline character
-            input[strcspn(input, "\n")] = 0;
-
-            // If the command is just whitespace or empty, do nothing and return
-            if (strlen(input) == 0 || strspn(input, " \t\n\r\v\f") == strlen(input)) {
-                if (DEBUG == 1)
-                {
-                    printf("No command. (or just whitespace)\n");
-                }
-                continue;
-            }
-
-            execute_command(input);
-        }
-    }
+    user_shell();
 
     return 0;
 }
