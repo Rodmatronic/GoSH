@@ -3,6 +3,7 @@ echo "Test 1..."
 sleep 1
 uname
 tty
+ps
 echo "Test 2!..."
 sleep 1
 export

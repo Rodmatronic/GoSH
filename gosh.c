@@ -7,7 +7,7 @@
 #define MAX_COMMAND_LENGTH 167772
 #define MAX_ARGUMENTS 256
 #define COMNOTFOUND ": No such command"
-#define DEBUG 0
+#define DEBUG 1
 #define STARTMSG 1
 #define VERSION "0.16"
 #define NAME "Goldie Shell (Go$H)"
@@ -138,7 +138,6 @@ void execute_command(char * input)
 
 
 int main(int argc, char *argv[]) {
-
     // Check if the shell is invoked with a filename argument
     if (argc == 2) {
         FILE *file = fopen(argv[1], "r");
@@ -165,6 +164,20 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    if (DEBUG == 1)
+    {
+        printf("DEBUG is on!\n");
+        if (STARTMSG == 1)
+        {
+            printf("STARTMSG is on!\n");
+        }
+        printf("MAX_COMMAND_LENGTH is %d\n", MAX_COMMAND_LENGTH);
+        printf("MAX_ARGUMENTS is %d\n", MAX_ARGUMENTS);
+        printf("COMNOTFOUND is '%s'\n", COMNOTFOUND);
+        printf("VERSION is %s\n", VERSION);
+        printf("NAME is %s\n", NAME);
+    }
+
     // Set PS1 environment variable
     if (setenv("PS1", "\\u@\\h:\\w\\$ ", 1) != 0) {
         perror("Error setting PS1");
@@ -182,7 +195,16 @@ int main(int argc, char *argv[]) {
         printf("     ___/  ,    .'/ /|\n");
         printf("    (_,___/...-` (_/_/   \n");
 
-        printf("%s version %s, built with love <3\n", NAME, VERSION);
+        if (DEBUG != 1)
+        {
+            printf("%s version %s, built with love <3\n", NAME, VERSION);
+        }else
+        printf("%s version %s DEBUG build, built with love <3\n", NAME, VERSION);
+    }
+
+    if (DEBUG == 1)
+    {
+        printf("%s", ps1);
     }
 
     while (1) {
@@ -197,6 +219,10 @@ int main(int argc, char *argv[]) {
 
             // If the command is just whitespace or empty, do nothing and return
             if (strlen(input) == 0 || strspn(input, " \t\n\r\v\f") == strlen(input)) {
+                if (DEBUG == 1)
+                {
+                    printf("No command. (or just whitespace)\n");
+                }
                 continue;
             }
 
