@@ -9,7 +9,7 @@
 #define COMNOTFOUND ": No such command"
 #define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.17"
+#define VERSION "0.18"
 #define NAME "Goldie Shell (Go$H)"
 
 char input[MAX_COMMAND_LENGTH];
@@ -88,7 +88,8 @@ void execute_command(char * input)
         }
 
         // Set the OLDPWD environment variable before changing the directory
-        setenv("OLDPWD", pwd, 1);
+        // This breaks on macOS, and barely does anything.
+        //setenv("OLDPWD", pwd, 1);
 
         // Update pwd to reflect the new current working directory
         pwd = getcwd(NULL, 0);
@@ -186,10 +187,16 @@ int main(int argc, char *argv[]) {
 
     if (STARTMSG == 1)
     {
-        printf(" Goldie___\n");
+        //printf("  ______       _     _ _       \n");
+        //printf(" / _____)     | |   | (_)      \n");
+        //printf("| /  ___  ___ | | _ | |_  ____ \n");
+        //printf("| | (___)/ _ \| |/ || | |/ _  )\n");
+        //printf("| \____/| |_| | ( (_| | ( (/ / \n");
+        //printf(" \_____/ \___/|_|\____|_|\____)\n");
+        printf("       ___\n");
         printf("    __/_  `.  .-````-.\n");
         printf("    \\_,` \\| \\-'  /   )`-')\n");
-        printf("      '') `'`    \\_ ((`''` SH\n");
+        printf("      '') `'`    \\_ ((`''` \n");
         printf("     ___/  ,    .'/ /|\n");
         printf("    (_,___/...-` (_/_/   \n");
 

@@ -1,2 +1,2 @@
 #/bin/sh
-clang -o gosh gosh.c
+clang -o gosh gosh.c -Wno-error
