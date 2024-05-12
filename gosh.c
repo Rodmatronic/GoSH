@@ -7,9 +7,9 @@
 #define MAX_COMMAND_LENGTH 167772
 #define MAX_ARGUMENTS 256
 #define COMNOTFOUND ": No such command"
-#define DEBUG 1
+#define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.16"
+#define VERSION "0.17"
 #define NAME "Goldie Shell (Go$H)"
 
 char input[MAX_COMMAND_LENGTH];
@@ -122,14 +122,12 @@ void execute_command(char * input)
         if (WIFEXITED(status)) {
             int exit_status = WEXITSTATUS(status);
             if (exit_status != 0) {
-                if (DEBUG == 1)
-                {
+                if (DEBUG == 1) {
                     printf("Child process exited with status %d\n", exit_status);
                 }
             }
         } else {
-            if (DEBUG == 1)
-            {
+            if (DEBUG == 1) {
                 printf("Child process terminated abnormally\n");
             }
         }
