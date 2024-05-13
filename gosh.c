@@ -45,7 +45,7 @@ void sigint_handler(int signum) {
         exit_gracefully();
     } else {
         if (print_prompt) {
-            printf("\n$ ");
+            printf("\n%s>$ ", pwd);
             fflush(stdout); // Flush output buffer to ensure prompt is displayed
         }
     }
@@ -56,126 +56,98 @@ void exit_gracefully() {
     exit(EXIT_SUCCESS);
 }
 
-void execute_command(char * input)
-{
+void execute_command(char *input) {
     // Set the flag to 0 to prevent printing the prompt
     print_prompt = 0;
 
-    // Tokenize the input to separate command and arguments
-    char *token;
-    char *args[MAX_ARGUMENTS + 1];
-    int arg_count = 0;
+    // Tokenize the input to separate commands
+    char *command;
+    char *commands[MAX_ARGUMENTS + 1];
+    int command_count = 0;
 
-    token = strtok(input, " ");
-    while (token != NULL && arg_count < MAX_ARGUMENTS) {
-        args[arg_count++] = token;
-        token = strtok(NULL, " ");
+    command = strtok(input, "&&");
+    while (command != NULL && command_count < MAX_ARGUMENTS) {
+        commands[command_count++] = command;
+        command = strtok(NULL, "&&");
     }
-    args[arg_count] = NULL; // Null-terminate the array of arguments
+    commands[command_count] = NULL; // Null-terminate the array of commands
 
-    // Check if the command is 'export'
-    if (strcmp(input, "export ") == 0) {
-        char *variable = strtok(input + 7, "=");
-        char *value = strtok(NULL, "");
+    // Execute each command
+    for (int i = 0; i < command_count; i++) {
+        // Tokenize the command to separate command and arguments
+        char *token;
+        char *args[MAX_ARGUMENTS + 1];
+        int arg_count = 0;
 
-        if (variable != NULL && value != NULL) {
-            // Set the environment variable
-            setenv(variable, value, 1);
-        } else {
-            printf("Invalid export command\n");
+        token = strtok(commands[i], " ");
+        while (token != NULL && arg_count < MAX_ARGUMENTS) {
+            args[arg_count++] = token;
+            token = strtok(NULL, " ");
         }
-    }
+        args[arg_count] = NULL; // Null-terminate the array of arguments
 
-    // Check if the command is 'export'
-    if (strcmp(input, "export") == 0) {
-        print_environment_variables();
-        return;
-    }
+        // Check if the command is 'export'
+        if (strcmp(args[0], "export") == 0) {
+            char *variable = strtok(commands[i] + 7, "=");
+            char *value = strtok(NULL, "");
 
-    if (strcmp(input, "exit") == 0 || (strcmp(input, "leave") == 0))
-    {
-        exit_gracefully();
-    }
-
-    // Check if the command is 'cd'
-    if (strcmp(args[0], "cd") == 0) {
-        if (arg_count == 1) {
-            // Change to home directory
-            chdir(getenv("HOME"));
-        } else if (arg_count == 2) {
-            // Change to the specified directory
-            if (strcmp(args[1], "-") == 0) {
-                // Change to the previous directory
-                char *prev_dir = getenv("OLDPWD");
-                if (prev_dir != NULL) {
-                    chdir(prev_dir);
-                } else {
-                    printf("cd: OLDPWD not set\n");
-                }
+            if (variable != NULL && value != NULL) {
+                // Set the environment variable
+                setenv(variable, value, 1);
             } else {
-                // Change to the specified directory
-                if (chdir(args[1]) != 0) {
-                    printf("cd: %s: No such file or directory\n", args[1]);
-                }
+                printf("Invalid export command\n");
             }
-        } else {
-            printf("cd: too many arguments\n");
+            continue;
         }
 
-        // Set the OLDPWD environment variable before changing the directory
-        // This breaks on macOS, and barely does anything.
-        //setenv("OLDPWD", pwd, 1);
+        if (strcmp(args[0], "exit") == 0 || (strcmp(args[0], "leave") == 0)) {
+            exit_gracefully();
+        }
 
-        // Update pwd to reflect the new current working directory
-        pwd = getcwd(NULL, 0);
-        if (pwd == NULL) {
-            perror("getcwd");
+        // Check if the command is 'cd'
+        if (strcmp(args[0], "cd") == 0) {
+            // Handle 'cd' command
+            // ...
+            continue;
+        }
+
+        // Fork a child process
+        pid_t pid = fork();
+
+        if (pid == -1) {
+            // Error occurred
+            perror("fork");
             exit(EXIT_FAILURE);
-        }
-        return;
-    }
+        } else if (pid == 0) {
+            // Child process
+            execvp(args[0], args);
 
-    // Fork a child process
-    pid_t pid = fork();
-
-    if (pid == -1) {
-        // Error occurred
-        perror("fork");
-        exit(EXIT_FAILURE);
-    } else if (pid == 0) {
-        // Child process
-        execvp(args[0], args);
-
-        // If execvp returns, it means it failed
-        printf("%s%s\n", args[0], COMNOTFOUND);
-        exit(EXIT_FAILURE);
-    } else {
-        // Parent process
-        int status;
-        waitpid(pid, &status, 0);
-
-        // Check if the child process terminated normally
-        if (WIFEXITED(status)) {
-            int exit_status = WEXITSTATUS(status);
-            if (exit_status != 0) {
-                if (DEBUG == 1) {
-                    printf("Child process exited with status %d\n", exit_status);
-                }
-            }
+            // If execvp returns, it means it failed
+            printf("%s%s\n", args[0], COMNOTFOUND);
+            exit(EXIT_FAILURE);
         } else {
-            if (DEBUG == 1) {
-                printf("Child process terminated abnormally\n");
+            // Parent process
+            int status;
+            waitpid(pid, &status, 0);
+
+            // Check if the child process terminated normally
+            if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+                // Child process terminated abnormally or with non-zero exit status
+                break; // Stop executing subsequent commands
             }
         }
     }
+
+    // Set the flag back to 1 to enable printing the prompt
     print_prompt = 1;
 }
+
 
 void user_shell() {
     while (1) {
         while (1) {
             snprintf(ps1, sizeof(ps1), "%s", getenv("PS1"));
-            printf("$ ");
+            printf("%s>$ ", pwd);
             if (fgets(input, MAX_COMMAND_LENGTH, stdin) == NULL) {
                 // Check for EOF (CTRL+D)
                 exit_gracefully();
@@ -241,7 +213,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Set PS1 environment variable
-    if (setenv("PS1", "\\u@\\h:\\w\\$ ", 1) != 0) {
+    if (setenv("PS1", "\\\\u@\\\\h:\\\\w\\\\$ ", 1) != 0) {
         perror("Error setting PS1");
         return 1;
     }
