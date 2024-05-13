@@ -65,21 +65,11 @@ void execute_command(char *input) {
     char *commands[MAX_ARGUMENTS + 1];
     int command_count = 0;
 
-    // Create pipes
-    int pipefds[2];
-    pipe(pipefds);
-
+    // Split input by '&&' to handle multiple commands
     command = strtok(input, "&&");
     while (command != NULL && command_count < MAX_ARGUMENTS) {
         commands[command_count++] = command;
         command = strtok(NULL, "&&");
-    }
-    commands[command_count] = NULL; // Null-terminate the array of commands
-
-    command = strtok(input, "|");
-    while (command != NULL && command_count < MAX_ARGUMENTS) {
-        commands[command_count++] = command;
-        command = strtok(NULL, "|");
     }
     commands[command_count] = NULL; // Null-terminate the array of commands
 
@@ -90,107 +80,136 @@ void execute_command(char *input) {
         char *args[MAX_ARGUMENTS + 1];
         int arg_count = 0;
 
-        token = strtok(commands[i], " ");
+        // Split command by '|' to handle piping
+        token = strtok(commands[i], "|");
         while (token != NULL && arg_count < MAX_ARGUMENTS) {
             args[arg_count++] = token;
-            token = strtok(NULL, " ");
+            token = strtok(NULL, "|");
         }
         args[arg_count] = NULL; // Null-terminate the array of arguments
 
-        // Check if the command is 'export'
-        if (strcmp(args[0], "export") == 0) {
-            char *variable = strtok(commands[i] + 7, "=");
-            char *value = strtok(NULL, "");
+        // Create pipes for inter-process communication
+        int pipe_fds[2];
+        int prev_pipe_read_end = -1;
 
-            if (variable != NULL && value != NULL) {
-                // Set the environment variable
-                setenv(variable, value, 1);
-            } else {
-                printf("Invalid export command\n");
+        // Iterate over each command in the pipe
+        for (int j = 0; j < arg_count; j++) {
+            // Tokenize the command and arguments
+            char *sub_command;
+            char *sub_args[MAX_ARGUMENTS + 1];
+            int sub_arg_count = 0;
+
+            sub_command = strtok(args[j], " ");
+            while (sub_command != NULL && sub_arg_count < MAX_ARGUMENTS) {
+                sub_args[sub_arg_count++] = sub_command;
+                sub_command = strtok(NULL, " ");
             }
-            continue;
-        }
+            sub_args[sub_arg_count] = NULL; // Null-terminate the array of arguments
 
-        if (strcmp(args[0], "exit") == 0 || (strcmp(args[0], "leave") == 0)) {
-            exit_gracefully();
-        }
-
-    // Check if the command is 'cd'
-    if (strcmp(args[0], "cd") == 0) {
-        if (arg_count == 1) {
-            // Change to home directory
-            chdir(getenv("HOME"));
-        } else if (arg_count == 2) {
-            // Change to the specified directory
-            if (strcmp(args[1], "-") == 0) {
-                // Change to the previous directory
-                char *prev_dir = getenv("OLDPWD");
-                if (prev_dir != NULL) {
-                    chdir(prev_dir);
+            // Handle built-in commands
+            if (strcmp(sub_args[0], "exit") == 0) {
+                exit_gracefully();
+            } else if (strcmp(sub_args[0], "cd") == 0) {
+                if (sub_arg_count == 1) {
+                    // Change to home directory
+                    chdir(getenv("HOME"));
+                } else if (sub_arg_count == 2) {
+                    // Change to the specified directory
+                    if (strcmp(sub_args[1], "-") == 0) {
+                        // Change to the previous directory
+                        char *prev_dir = getenv("OLDPWD");
+                        if (prev_dir != NULL) {
+                            chdir(prev_dir);
+                        } else {
+                            printf("cd: OLDPWD not set\n");
+                        }
+                    } else {
+                        // Change to the specified directory
+                        if (chdir(sub_args[1]) != 0) {
+                            printf("cd: %s: No such file or directory\n", sub_args[1]);
+                        }
+                    }
                 } else {
-                    printf("cd: OLDPWD not set\n");
+                    printf("cd: too many arguments\n");
                 }
+
+                // Update pwd to reflect the new current working directory
+                pwd = getcwd(NULL, 0);
+                if (pwd == NULL) {
+                    perror("getcwd");
+                    exit(EXIT_FAILURE);
+                }
+
+                continue; // Skip executing the command further
+            } else if (strcmp(sub_args[0], "export") == 0) {
+                // Export environment variables
+                char *variable = strtok(args[j] + 7, "=");
+                char *value = strtok(NULL, "");
+
+                if (variable != NULL && value != NULL) {
+                    // Set the environment variable
+                    setenv(variable, value, 1);
+                } else {
+                    printf("Invalid export command\n");
+                }
+
+                continue; // Skip executing the command further
+            }
+
+            // Create pipe if not the last command
+            if (j < arg_count - 1) {
+                if (pipe(pipe_fds) == -1) {
+                    perror("pipe");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            // Fork a child process
+            pid_t pid = fork();
+
+            if (pid == -1) {
+                // Error occurred
+                perror("fork");
+                exit(EXIT_FAILURE);
+            } else if (pid == 0) {
+                // Child process
+                if (j > 0) {
+                    // Redirect input from previous command
+                    dup2(prev_pipe_read_end, STDIN_FILENO);
+                    close(prev_pipe_read_end);
+                }
+
+                if (j < arg_count - 1) {
+                    // Redirect output to the next command
+                    dup2(pipe_fds[1], STDOUT_FILENO);
+                    close(pipe_fds[1]);
+                }
+
+                // Execute the command
+                execvp(sub_args[0], sub_args);
+
+                // If execvp returns, it means it failed
+                printf("%s%s\n", sub_args[0], COMNOTFOUND);
+                exit(EXIT_FAILURE);
             } else {
-                // Change to the specified directory
-                if (chdir(args[1]) != 0) {
-                    printf("cd: %s: No such file or directory\n", args[1]);
+                // Parent process
+                if (j > 0) {
+                    // Close the read end of the previous pipe
+                    close(prev_pipe_read_end);
+                }
+
+                if (j < arg_count - 1) {
+                    // Close the write end of the current pipe
+                    close(pipe_fds[1]);
+                    // Update the previous pipe read end for next command
+                    prev_pipe_read_end = pipe_fds[0];
                 }
             }
-        } else {
-            printf("cd: too many arguments\n");
         }
 
-        // Set the OLDPWD environment variable before changing the directory
-        // This breaks on macOS, and barely does anything.
-        //setenv("OLDPWD", pwd, 1);
-
-        // Update pwd to reflect the new current working directory
-        pwd = getcwd(NULL, 0);
-        if (pwd == NULL) {
-            perror("getcwd");
-            exit(EXIT_FAILURE);
-        }
-        return;
-    }
-
-        // Fork a child process
-        pid_t pid = fork();
-
-        if (pid == -1) {
-            // Error occurred
-            perror("fork");
-            exit(EXIT_FAILURE);
-        } else if (pid == 0) {
-            // Child process
-
-            // For commands after the first one, set up the pipe for input
-            if (i > 0) {
-                dup2(pipefds[0], STDIN_FILENO);
-                close(pipefds[0]);
-                close(pipefds[1]);
-            }
-
-            // For commands other than the last one, set up the pipe for output
-            if (i < command_count - 1) {
-                close(pipefds[0]);
-                dup2(pipefds[1], STDOUT_FILENO);
-                close(pipefds[1]);
-            }
-
-            // Execute the command
-            execvp(args[0], args);
-
-            // If execvp returns, it means it failed
-            printf("%s%s\n", args[0], COMNOTFOUND);
-            exit(EXIT_FAILURE);
-        } else {
-            // Parent process
-            waitpid(pid, NULL, 0);
-
-            // Close the write end of the pipe for the last command
-            if (i == command_count - 1) {
-                close(pipefds[1]);
-            }
+        // Wait for all child processes to finish
+        for (int j = 0; j < arg_count; j++) {
+            wait(NULL);
         }
     }
 
