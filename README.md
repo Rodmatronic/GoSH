@@ -1,6 +1,8 @@
 # GoSH
 A simple portable cross-platform Unix shell written in C.
 
+So far, it has been tested on Linux, FreeBSD, Haiku, and Darwin.
+
 (here is the shell compiled on, and running on Darwin)
 ![329817658-9991852b-0c68-4a43-86d0-3f7e81f1d47a](https://github.com/Rodmatronic/GoSH/assets/105672808/d83e13c9-2832-47c7-91b3-8b931293576a)
 
