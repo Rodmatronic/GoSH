@@ -9,6 +9,7 @@ killall gosh
 unixver='$(uname -s)'
 
 if [[ $unixver != 'Darwin' ]]; then
+    sudo rm /bin/gosh
     echo Installing to /bin
     sudo cp ./gosh /bin/gosh
     exit

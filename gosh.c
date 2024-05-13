@@ -14,13 +14,14 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <fcntl.h> // Include for file operations
 
 #define MAX_COMMAND_LENGTH 167772
 #define MAX_ARGUMENTS 256
 #define COMNOTFOUND ": No such command"
 #define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.2"
+#define VERSION "0.21"
 #define NAME "Goldie Shell (Go$H)"
 
 int print_prompt = 1; // Flag to control printing of prompt
@@ -73,6 +74,8 @@ void execute_command(char *input) {
     }
     commands[command_count] = NULL; // Null-terminate the array of commands
 
+    int saved_stdout = dup(STDOUT_FILENO); // Save a copy of the original STDOUT
+
     // Execute each command
     for (int i = 0; i < command_count; i++) {
         // Tokenize the command to separate command and arguments
@@ -105,6 +108,28 @@ void execute_command(char *input) {
                 sub_command = strtok(NULL, " ");
             }
             sub_args[sub_arg_count] = NULL; // Null-terminate the array of arguments
+
+            // Handle file redirections
+            int fd;
+            for (int k = 0; sub_args[k] != NULL; k++) {
+                if (strcmp(sub_args[k], ">") == 0) {
+                    // Output redirection (truncate)
+                    fd = open(sub_args[k + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                    dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                    sub_args[k] = NULL; // Remove ">" from arguments
+                    sub_args[k + 1] = NULL; // Remove the filename from arguments
+                    break;
+                } else if (strcmp(sub_args[k], ">>") == 0) {
+                    // Output redirection (append)
+                    fd = open(sub_args[k + 1], O_WRONLY | O_CREAT | O_APPEND, 0644);
+                    dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                    sub_args[k] = NULL; // Remove ">>" from arguments
+                    sub_args[k + 1] = NULL; // Remove the filename from arguments
+                    break;
+                }
+            }
 
             // Handle built-in commands
             if (strcmp(sub_args[0], "exit") == 0) {
@@ -213,10 +238,13 @@ void execute_command(char *input) {
         }
     }
 
+    // After command execution, restore the original STDOUT
+    dup2(saved_stdout, STDOUT_FILENO);
+    close(saved_stdout);
+
     // Set the flag back to 1 to enable printing the prompt
     print_prompt = 1;
 }
-
 
 void user_shell() {
     while (1) {
