@@ -10,5 +10,5 @@ export
 export TEST_RUN=ya
 echo "3..?"
 sleep 1
-gosh ./tests/test2.sh
+gosh test2.sh
 echo bye!
