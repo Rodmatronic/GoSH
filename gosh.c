@@ -65,10 +65,21 @@ void execute_command(char *input) {
     char *commands[MAX_ARGUMENTS + 1];
     int command_count = 0;
 
+    // Create pipes
+    int pipefds[2];
+    pipe(pipefds);
+
     command = strtok(input, "&&");
     while (command != NULL && command_count < MAX_ARGUMENTS) {
         commands[command_count++] = command;
         command = strtok(NULL, "&&");
+    }
+    commands[command_count] = NULL; // Null-terminate the array of commands
+
+    command = strtok(input, "|");
+    while (command != NULL && command_count < MAX_ARGUMENTS) {
+        commands[command_count++] = command;
+        command = strtok(NULL, "|");
     }
     commands[command_count] = NULL; // Null-terminate the array of commands
 
@@ -151,6 +162,22 @@ void execute_command(char *input) {
             exit(EXIT_FAILURE);
         } else if (pid == 0) {
             // Child process
+
+            // For commands after the first one, set up the pipe for input
+            if (i > 0) {
+                dup2(pipefds[0], STDIN_FILENO);
+                close(pipefds[0]);
+                close(pipefds[1]);
+            }
+
+            // For commands other than the last one, set up the pipe for output
+            if (i < command_count - 1) {
+                close(pipefds[0]);
+                dup2(pipefds[1], STDOUT_FILENO);
+                close(pipefds[1]);
+            }
+
+            // Execute the command
             execvp(args[0], args);
 
             // If execvp returns, it means it failed
@@ -158,13 +185,11 @@ void execute_command(char *input) {
             exit(EXIT_FAILURE);
         } else {
             // Parent process
-            int status;
-            waitpid(pid, &status, 0);
+            waitpid(pid, NULL, 0);
 
-            // Check if the child process terminated normally
-            if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-                // Child process terminated abnormally or with non-zero exit status
-                break; // Stop executing subsequent commands
+            // Close the write end of the pipe for the last command
+            if (i == command_count - 1) {
+                close(pipefds[1]);
             }
         }
     }
