@@ -1,3 +1,13 @@
+/*
+    Goldie Shell, writtem by Rodmatronics, using the GNU GENERAL PUBLIC LICENSE.
+
+    I wrote this shell to test my skills with C, and Unix.
+    The whole goal of this is to by a usable shell, that I can trust being my default shell
+    on macOS, Linux, Haiku, FreeBSD, OpenBSD, and maybe even Research Unix.
+
+    Good luck porting to Windowos :3
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,15 +20,17 @@
 #define COMNOTFOUND ": No such command"
 #define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.19"
+#define VERSION "0.2"
 #define NAME "Goldie Shell (Go$H)"
 
+int print_prompt = 1; // Flag to control printing of prompt
 char input[MAX_COMMAND_LENGTH];
 char * pwd;
 char ps1[1024];
 
 void sigint_handler(int);
 void user_shell();
+void exit_gracefully();
 
 void print_environment_variables() {
     extern char **environ;
@@ -28,12 +40,27 @@ void print_environment_variables() {
 }
 
 void sigint_handler(int signum) {
-    printf("\n$ ");
-    fflush(stdout); // Flush output buffer to ensure prompt is displayed
+    if (!isatty(STDIN_FILENO)) {
+        // If not running in interactive mode (e.g., running a script), simply exit
+        exit_gracefully();
+    } else {
+        if (print_prompt) {
+            printf("\n$ ");
+            fflush(stdout); // Flush output buffer to ensure prompt is displayed
+        }
+    }
+}
+
+void exit_gracefully() {
+    printf("exit\n");
+    exit(EXIT_SUCCESS);
 }
 
 void execute_command(char * input)
 {
+    // Set the flag to 0 to prevent printing the prompt
+    print_prompt = 0;
+
     // Tokenize the input to separate command and arguments
     char *token;
     char *args[MAX_ARGUMENTS + 1];
@@ -67,8 +94,7 @@ void execute_command(char * input)
 
     if (strcmp(input, "exit") == 0 || (strcmp(input, "leave") == 0))
     {
-        printf("exit\n");
-        exit(EXIT_SUCCESS);
+        exit_gracefully();
     }
 
     // Check if the command is 'cd'
@@ -142,6 +168,7 @@ void execute_command(char * input)
             }
         }
     }
+    print_prompt = 1;
 }
 
 void user_shell() {
@@ -151,8 +178,7 @@ void user_shell() {
             printf("$ ");
             if (fgets(input, MAX_COMMAND_LENGTH, stdin) == NULL) {
                 // Check for EOF (CTRL+D)
-                printf("\n");
-                exit(EXIT_SUCCESS);
+                exit_gracefully();
             }
 
             // Remove trailing newline character
@@ -225,18 +251,18 @@ int main(int argc, char *argv[]) {
     if (STARTMSG == 1)
     {
         printf("       ___                    \n");
-        printf("    __/_  `.  .-````-.        \n");
+        printf("    __/_  `.  .-````-.        Welcome to\n");
         printf("<3  \\_,` \\| \\-'  /   )`-')    ┌─┐┌─┐┌┼┐┬ ┬\n");
         printf("      '') `'`    \\_ ((`''`    │ ┬│ │└┼┐├─┤\n");
         printf("     ___/  ,    .'/ /|        └─┘└─┘└┼┘┴ ┴\n");
-        printf("    (_,___/...-` (_/_/        (%s)     \n", VERSION);
+        printf("    (_,___/...-` (_/_/        (v%s)     \n", VERSION);
         printf("═════════════════════════╣\n");
         if (DEBUG == 1)
         {
             printf("DEBUG build\n");
         }
     }
-    
+
     if (DEBUG == 1)
     {
         printf("%s", ps1);
