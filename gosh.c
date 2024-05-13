@@ -224,26 +224,19 @@ int main(int argc, char *argv[]) {
 
     if (STARTMSG == 1)
     {
-        //printf("  ______       _     _ _       \n");
-        //printf(" / _____)     | |   | (_)      \n");
-        //printf("| /  ___  ___ | | _ | |_  ____ \n");
-        //printf("| | (___)/ _ \| |/ || | |/ _  )\n");
-        //printf("| \____/| |_| | ( (_| | ( (/ / \n");
-        //printf(" \_____/ \___/|_|\____|_|\____)\n");
-        printf("       ___\n");
-        printf("    __/_  `.  .-````-.\n");
-        printf("    \\_,` \\| \\-'  /   )`-')\n");
-        printf("      '') `'`    \\_ ((`''` \n");
-        printf("     ___/  ,    .'/ /|\n");
-        printf("    (_,___/...-` (_/_/   \n");
-
-        if (DEBUG != 1)
+        printf("       ___                    \n");
+        printf("    __/_  `.  .-````-.        \n");
+        printf("<3  \\_,` \\| \\-'  /   )`-')    ┌─┐┌─┐┌┼┐┬ ┬\n");
+        printf("      '') `'`    \\_ ((`''`    │ ┬│ │└┼┐├─┤\n");
+        printf("     ___/  ,    .'/ /|        └─┘└─┘└┼┘┴ ┴\n");
+        printf("    (_,___/...-` (_/_/        (%s)     \n", VERSION);
+        printf("═════════════════════════╣\n");
+        if (DEBUG == 1)
         {
-            printf("%s version %s, built with love <3\n", NAME, VERSION);
-        }else
-        printf("%s version %s DEBUG build, built with love <3\n", NAME, VERSION);
+            printf("DEBUG build\n");
+        }
     }
-
+    
     if (DEBUG == 1)
     {
         printf("%s", ps1);
