@@ -104,12 +104,43 @@ void execute_command(char *input) {
             exit_gracefully();
         }
 
-        // Check if the command is 'cd'
-        if (strcmp(args[0], "cd") == 0) {
-            // Handle 'cd' command
-            // ...
-            continue;
+    // Check if the command is 'cd'
+    if (strcmp(args[0], "cd") == 0) {
+        if (arg_count == 1) {
+            // Change to home directory
+            chdir(getenv("HOME"));
+        } else if (arg_count == 2) {
+            // Change to the specified directory
+            if (strcmp(args[1], "-") == 0) {
+                // Change to the previous directory
+                char *prev_dir = getenv("OLDPWD");
+                if (prev_dir != NULL) {
+                    chdir(prev_dir);
+                } else {
+                    printf("cd: OLDPWD not set\n");
+                }
+            } else {
+                // Change to the specified directory
+                if (chdir(args[1]) != 0) {
+                    printf("cd: %s: No such file or directory\n", args[1]);
+                }
+            }
+        } else {
+            printf("cd: too many arguments\n");
         }
+
+        // Set the OLDPWD environment variable before changing the directory
+        // This breaks on macOS, and barely does anything.
+        //setenv("OLDPWD", pwd, 1);
+
+        // Update pwd to reflect the new current working directory
+        pwd = getcwd(NULL, 0);
+        if (pwd == NULL) {
+            perror("getcwd");
+            exit(EXIT_FAILURE);
+        }
+        return;
+    }
 
         // Fork a child process
         pid_t pid = fork();
