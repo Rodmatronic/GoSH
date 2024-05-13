@@ -10,7 +10,7 @@
 #define COMNOTFOUND ": No such command"
 #define DEBUG 0
 #define STARTMSG 1
-#define VERSION "0.18"
+#define VERSION "0.19"
 #define NAME "Goldie Shell (Go$H)"
 
 char input[MAX_COMMAND_LENGTH];
@@ -148,17 +148,19 @@ void user_shell() {
     while (1) {
         while (1) {
             snprintf(ps1, sizeof(ps1), "%s", getenv("PS1"));
-            //printf("%s", ps1);
             printf("$ ");
-            fgets(input, MAX_COMMAND_LENGTH, stdin);
+            if (fgets(input, MAX_COMMAND_LENGTH, stdin) == NULL) {
+                // Check for EOF (CTRL+D)
+                printf("\n");
+                exit(EXIT_SUCCESS);
+            }
 
             // Remove trailing newline character
             input[strcspn(input, "\n")] = 0;
 
             // If the command is just whitespace or empty, do nothing and return
             if (strlen(input) == 0 || strspn(input, " \t\n\r\v\f") == strlen(input)) {
-                if (DEBUG == 1)
-                {
+                if (DEBUG == 1) {
                     printf("No command. (or just whitespace)\n");
                 }
                 continue;
