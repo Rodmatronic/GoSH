@@ -4,7 +4,10 @@ A simple portable cross-platform Unix shell written in C.
 (here is the shell compiled on, and running on Darwin)
 ![329817658-9991852b-0c68-4a43-86d0-3f7e81f1d47a](https://github.com/Rodmatronic/GoSH/assets/105672808/d83e13c9-2832-47c7-91b3-8b931293576a)
 
-(and on Haiku)
+![image](https://github.com/Rodmatronic/GoSH/assets/105672808/3cca05eb-a7f8-475e-ada2-9aa0f80a67cb)
+
+![image](https://github.com/Rodmatronic/GoSH/assets/105672808/b07bbaca-ff92-4702-8f69-f38e4a2198ac)
+
 ![image](https://github.com/Rodmatronic/GoSH/assets/105672808/60c30230-66ac-41d7-a94b-07702f421a35)
 
 # How can I use it?
