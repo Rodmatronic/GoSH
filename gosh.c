@@ -76,6 +76,42 @@ void execute_command(char *input) {
 
     int saved_stdout = dup(STDOUT_FILENO); // Save a copy of the original STDOUT
 
+    // Check if the command is 'export'
+    if (strcmp(commands[0], "export") == 0) {
+        // If no variable is specified after 'export', print all environment variables
+        if (command_count == 1) {
+            print_environment_variables();
+            return;
+        }
+
+        // If the export command is followed by a variable name
+        char *variable;
+        char *value;
+        for (int i = 1; i < command_count; i++) {
+            // Tokenize each argument by '=' to separate variable and value
+            variable = strtok(commands[i], "=");
+            value = strtok(NULL, "=");
+
+            // Set the environment variable
+            if (setenv(variable, value, 1) != 0) {
+                perror("Error setting environment variable");
+            }
+        }
+        return;
+    }
+
+    // Check if the command is 'export'
+    if (strcmp(input, "export") == 0) {
+        print_environment_variables();
+        return;
+    }
+
+    if (strcmp(input, "exit") == 0 || (strcmp(input, "leave") == 0))
+    {
+        printf("exit\n");
+        exit(EXIT_SUCCESS);
+    }
+
     // Execute each command
     for (int i = 0; i < command_count; i++) {
         // Tokenize the command to separate command and arguments
@@ -131,10 +167,7 @@ void execute_command(char *input) {
                 }
             }
 
-            // Handle built-in commands
-            if (strcmp(sub_args[0], "exit") == 0) {
-                exit_gracefully();
-            } else if (strcmp(sub_args[0], "cd") == 0) {
+            if (strcmp(sub_args[0], "cd") == 0) {
                 if (sub_arg_count == 1) {
                     // Change to home directory
                     chdir(getenv("HOME"));
@@ -163,19 +196,6 @@ void execute_command(char *input) {
                 if (pwd == NULL) {
                     perror("getcwd");
                     exit(EXIT_FAILURE);
-                }
-
-                continue; // Skip executing the command further
-            } else if (strcmp(sub_args[0], "export") == 0) {
-                // Export environment variables
-                char *variable = strtok(args[j] + 7, "=");
-                char *value = strtok(NULL, "");
-
-                if (variable != NULL && value != NULL) {
-                    // Set the environment variable
-                    setenv(variable, value, 1);
-                } else {
-                    printf("Invalid export command\n");
                 }
 
                 continue; // Skip executing the command further
