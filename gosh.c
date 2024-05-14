@@ -77,7 +77,7 @@ void execute_command(char *input) {
     int saved_stdout = dup(STDOUT_FILENO); // Save a copy of the original STDOUT
 
     // Check if the command is 'export'
-    if (strcmp(commands[0], "export") == 0) {
+    if (strcmp(commands[0], "export ") == 0) {
         // If no variable is specified after 'export', print all environment variables
         if (command_count == 1) {
             print_environment_variables();
@@ -165,6 +165,22 @@ void execute_command(char *input) {
                     sub_args[k + 1] = NULL; // Remove the filename from arguments
                     break;
                 }
+            }
+
+            // Check if the command is 'exec'
+            if (strcmp(sub_args[0], "exec") == 0) {
+                // If 'exec' is followed by a command, execute that command
+                if (sub_arg_count > 1) {
+                    // Replace the current process with the specified command
+                    execvp(sub_args[1], &sub_args[1]);
+                    // If execvp returns, it means it failed
+                    printf("%s%s\n", sub_args[1], COMNOTFOUND);
+                    exit(EXIT_FAILURE);
+                } else {
+                    // If 'exec' is not followed by a command, print an error
+                    printf("exec: command not specified\n");
+                }
+                return;
             }
 
             if (strcmp(sub_args[0], "cd") == 0) {
